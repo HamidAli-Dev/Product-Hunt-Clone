@@ -2,6 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { signIn } from "next-auth/react";
 
 const AuthContent = () => {
   return (
@@ -24,12 +25,18 @@ const AuthContent = () => {
         </div>
       </div>
 
-      <button className="border rounded-md py-2 mt-4 flex items-center gap-4 px-10">
+      <button
+        className="border rounded-md py-2 mt-4 flex items-center gap-4 px-10 cursor-pointer"
+        onClick={() => signIn("google")}
+      >
         <FcGoogle className="text-xl" />
         Sign in with Google
       </button>
 
-      <button className="border rounded-md py-2 mt-4 flex items-center gap-4 px-10">
+      <button
+        className="border rounded-md py-2 mt-4 flex items-center gap-4 px-10 cursor-pointer"
+        onClick={() => signIn("github")}
+      >
         <FaGithub className="text-xl text-purple-800" />
         Sign in with Github
       </button>

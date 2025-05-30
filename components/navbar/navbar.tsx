@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { Session } from "next-auth";
 
 import Logo from "./logo";
 import Search from "./search";
@@ -8,8 +9,15 @@ import SignInButton from "./sign-in-button";
 import SignUpButton from "./sign-up-button";
 import Modal from "../ui/modals/modal";
 import AuthContent from "./auth-content";
+import Submit from "./submit";
+import NotificationIcon from "./notification-icon";
+import Avatar from "./avatar";
 
-const Navbar = () => {
+interface NavbarProps {
+  authUser: Session | null;
+}
+
+const Navbar = ({ authUser }: NavbarProps) => {
   const [authModalVisible, setAuthModalVisible] = useState(false);
 
   const handleButtonClick = () => {
@@ -28,12 +36,22 @@ const Navbar = () => {
           <Menu />
         </div>
 
-        <div
-          onClick={handleButtonClick}
-          className="flex items-center space-x-6 cursor-pointer text-sm"
-        >
-          <SignInButton />
-          <SignUpButton />
+        <div className="flex items-center text-sm space-x-6">
+          {authUser ? (
+            <>
+              <Submit authUser={authUser} />
+              <NotificationIcon />
+              <Avatar authUser={authUser} />
+            </>
+          ) : (
+            <div
+              onClick={handleButtonClick}
+              className="flex items-center space-x-6 cursor-pointer text-sm"
+            >
+              <SignInButton />
+              <SignUpButton />
+            </div>
+          )}
         </div>
 
         <Modal visible={authModalVisible} setVisible={setAuthModalVisible}>
