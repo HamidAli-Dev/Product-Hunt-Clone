@@ -4,6 +4,7 @@ import Image from "next/image";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -244,10 +245,6 @@ const NewProduct = () => {
   const prevStep = useCallback(() => {
     setStep(step - 1);
   }, [step]);
-
-  const handleGoToProducts = () => {
-    window.location.href = "/my-products";
-  };
 
   const submitAnotherProduct = () => {
     setStep(1);
@@ -693,13 +690,13 @@ const NewProduct = () => {
             </div>
 
             <div className="flex flex-col  gap-4">
-              <div
-                onClick={handleGoToProducts}
+              <Link
+                href="/my-products"
                 className="bg-[#ff6154] text-white py-2 px-4
                  rounded mt-4 flex w-60 justify-center items-center cursor-pointer"
               >
                 Go to your products
-              </div>
+              </Link>
 
               <Separator />
 

@@ -20,9 +20,9 @@ interface CreateProductData {
 
 export async function createProduct(data: CreateProductData) {
   try {
-    const session = await auth();
+    const authUser = await auth();
 
-    if (!session?.user?.id) {
+    if (!authUser?.user?.id) {
       throw new Error("Unauthorized");
     }
 
@@ -56,7 +56,7 @@ export async function createProduct(data: CreateProductData) {
         },
         user: {
           connect: {
-            id: session.user.id,
+            id: authUser.user.id,
           },
         },
       },
@@ -69,3 +69,159 @@ export async function createProduct(data: CreateProductData) {
     return { success: false, error: "Failed to create product" };
   }
 }
+
+export const getOwnerProducts = async () => {
+  const authUser = await auth();
+
+  if (!authUser) {
+    return [];
+  }
+
+  const userId = authUser.user?.id;
+
+  const products = await db.product.findMany({
+    where: {
+      userId,
+    },
+  });
+
+  return products;
+};
+
+export const getProductById = async (productId: string) => {
+  try {
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+      include: {
+        categories: true,
+        images: true,
+        comments: {
+          include: {
+            user: true,
+          },
+        },
+        upvotes: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+
+export const updateProduct = async (
+  productId: string,
+  productData: CreateProductData
+) => {
+  const {
+    name,
+    slug,
+    headline,
+    description,
+    logo,
+    releaseDate,
+    website,
+    twitter,
+    discord,
+    images,
+  } = productData;
+  try {
+    const authUser = await auth();
+    if (!authUser) {
+      throw new Error("Unauthorized");
+    }
+
+    const productByUserId = await db.product.findUnique({
+      where: {
+        id: productId,
+        userId: authUser.user?.id,
+      },
+    });
+
+    if (!productByUserId) {
+      throw new Error("You are not owner of this product");
+    }
+
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    await db.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        name,
+        slug,
+        headline,
+        description,
+        logo,
+        releaseDate,
+        website,
+        twitter,
+        discord,
+        images: {
+          deleteMany: {
+            productId,
+          },
+          createMany: {
+            data: images.map((image) => ({ url: image })),
+          },
+        },
+        status: "PENDING",
+      },
+    });
+
+    return { success: true, product };
+  } catch (error) {
+    console.error("Failed to update product:", error);
+  }
+};
+
+export const deleteProduct = async (productId: string) => {
+  try {
+    const authUser = await auth();
+
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const productByUserId = await db.product.findUnique({
+      where: {
+        id: productId,
+        userId: authUser.user?.id,
+      },
+    });
+
+    if (!productByUserId) {
+      throw new Error("You are not owner of this product");
+    }
+
+    await db.product.delete({
+      where: {
+        id: productId,
+      },
+      include: {
+        images: true,
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.log("Error while deleting product", error);
+  }
+};
