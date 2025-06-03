@@ -225,3 +225,95 @@ export const deleteProduct = async (productId: string) => {
     console.log("Error while deleting product", error);
   }
 };
+
+export const getPendingProducts = async () => {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        status: "PENDING",
+      },
+      include: {
+        categories: true,
+        images: true,
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log("Error while getting pending products", error);
+  }
+};
+
+export const activateProduct = async (productId: string) => {
+  try {
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    await db.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        status: "ACTIVE",
+      },
+    });
+
+    await db.notification.create({
+      data: {
+        userId: product.userId,
+        productId: product.id,
+        profilePicture: product.logo,
+        body: `Your product ${product.name} has been activated`,
+        type: "ACTIVATED",
+        status: "UNREAD",
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.log("Error while activating product", error);
+  }
+};
+
+export const rejectProduct = async (productId: string, reason: string) => {
+  try {
+    const product = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found or not authorized");
+    }
+
+    await db.product.update({
+      where: {
+        id: productId,
+      },
+      data: {
+        status: "REJECTED",
+      },
+    });
+
+    await db.notification.create({
+      data: {
+        userId: product.userId,
+        productId: product.id,
+        profilePicture: product.logo,
+        body: `Your product ${product.name} has been rejected. Reason: ${reason}`,
+        type: "REJECTED",
+        status: "UNREAD",
+      },
+    });
+  } catch (error) {
+    console.log("Error while rejecting product", error);
+  }
+};
