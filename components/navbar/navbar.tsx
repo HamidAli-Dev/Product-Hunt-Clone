@@ -12,12 +12,15 @@ import AuthContent from "./auth-content";
 import Submit from "./submit";
 import NotificationIcon from "./notification-icon";
 import Avatar from "./avatar";
+import { Notification, Product } from "@prisma/client";
 
 interface NavbarProps {
   authUser: Session | null;
+  notifications: Notification[] | null;
+  products: Product[] | null;
 }
 
-const Navbar = ({ authUser }: NavbarProps) => {
+const Navbar = ({ authUser, notifications, products }: NavbarProps) => {
   const [authModalVisible, setAuthModalVisible] = useState(false);
 
   const handleButtonClick = () => {
@@ -36,11 +39,11 @@ const Navbar = ({ authUser }: NavbarProps) => {
           <Menu />
         </div>
 
-        <div className="flex items-center text-sm space-x-6">
+        <div className="flex items-center text-sm space-x-6 cursor-pointer">
           {authUser ? (
             <>
-              <Submit authUser={authUser} />
-              <NotificationIcon />
+              <Submit authUser={authUser} products={products} />
+              <NotificationIcon notifications={notifications} />
               <Avatar authUser={authUser} />
             </>
           ) : (

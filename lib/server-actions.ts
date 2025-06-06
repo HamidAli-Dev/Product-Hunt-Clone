@@ -317,3 +317,364 @@ export const rejectProduct = async (productId: string, reason: string) => {
     console.log("Error while rejecting product", error);
   }
 };
+
+export const getActiveProducts = async () => {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      include: {
+        categories: true,
+        images: true,
+        comments: {
+          include: {
+            user: true,
+          },
+        },
+        upvotes: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: {
+        upvotes: {
+          _count: "desc",
+        },
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log("Error while getting active products", error);
+  }
+};
+
+export const commentOnProduct = async (productId: string, comment: string) => {
+  try {
+    const authUser = await auth();
+
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const userId = authUser.user.id;
+
+    // Check if authUser has profile picture
+    const profilePicture = authUser.user.image || "";
+
+    await db.comment.create({
+      data: {
+        userId,
+        productId,
+        body: comment,
+        profilePicture,
+        createdAt: new Date(),
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    const productDetails = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+      select: {
+        userId: true,
+        name: true, // Include the product name in the query
+      },
+    });
+
+    // Check if the commenter is not the owner of the product
+    if (productDetails && productDetails.userId !== userId) {
+      // Notify the product owner about the comment
+      await db.notification.create({
+        data: {
+          userId: productDetails.userId,
+          body: `Commented on your product "${productDetails.name}"`,
+          profilePicture: profilePicture,
+          productId: productId,
+          type: "COMMENT",
+          status: "UNREAD",
+          // Ensure commentId is included here
+        },
+      });
+    }
+  } catch (error) {
+    console.log("Error while commenting on product", error);
+  }
+};
+
+export const upvoteProduct = async (productId: string) => {
+  try {
+    const authUser = await auth();
+
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const profilePicture = authUser.user.image || "";
+
+    const upvote = await db.upvote.findFirst({
+      where: {
+        userId: authUser.user.id,
+        productId,
+      },
+    });
+
+    if (upvote) {
+      await db.upvote.delete({
+        where: {
+          id: upvote.id,
+        },
+      });
+    } else {
+      await db.upvote.create({
+        data: {
+          userId: authUser.user.id,
+          productId,
+        },
+      });
+    }
+
+    const productOwner = await db.product.findUnique({
+      where: {
+        id: productId,
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    // notify the product owner about the upvote
+
+    if (productOwner && productOwner.userId !== authUser.user.id) {
+      await db.notification.create({
+        data: {
+          userId: productOwner.userId,
+          body: `Upvoted your product`,
+          profilePicture: profilePicture,
+          productId: productId,
+          type: "UPVOTE",
+          status: "UNREAD",
+        },
+      });
+    }
+
+    return true;
+  } catch (error) {
+    console.log("Error while upvoting product", error);
+  }
+};
+
+export const getUpvotedProducts = async () => {
+  try {
+    const authUser = await auth();
+
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const userId = authUser.user.id;
+
+    const upvotedProducts = await db.upvote.findMany({
+      where: {
+        userId,
+      },
+      include: {
+        product: true,
+      },
+    });
+
+    return upvotedProducts.map((upvote) => upvote.product);
+  } catch (error) {
+    console.error("Error getting upvoted products:", error);
+    return [];
+  }
+};
+
+export const getProductBySlug = async (slug: string) => {
+  try {
+    const product = await db.product.findUnique({
+      where: {
+        slug,
+      },
+      include: {
+        images: true,
+        categories: true,
+        comments: {
+          include: {
+            user: true,
+          },
+        },
+        upvotes: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    return product;
+  } catch (error) {
+    console.log("Error while getProductBySlug", error);
+  }
+};
+
+export const getCategories = async () => {
+  try {
+    const categories = await db.category.findMany({
+      where: {
+        products: {
+          some: {
+            status: "ACTIVE",
+          },
+        },
+      },
+    });
+
+    return categories;
+  } catch (error) {
+    console.log("Error while getCategories", error);
+  }
+};
+
+export const getProductsByCategoryName = async (category: string) => {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        categories: {
+          some: {
+            name: category,
+          },
+        },
+        status: "ACTIVE",
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log("Error while getProductsByCategoryName", error);
+  }
+};
+
+export const getRankById = async () => {
+  try {
+    const rankedProducts = await db.product.findMany({
+      where: {
+        status: "ACTIVE",
+      },
+      select: {
+        id: true,
+        name: true,
+        upvotes: {
+          select: {
+            id: true,
+          },
+        },
+      },
+      orderBy: {
+        upvotes: {
+          _count: "desc",
+        },
+      },
+    });
+
+    // Find the maximum number of upvotes among all products
+    const maxUpvotes =
+      rankedProducts.length > 0 ? rankedProducts[0].upvotes.length : 0;
+
+    // Assign ranks to each product based on their number of upvotes
+    const productsWithRank = rankedProducts.map((product, index) => ({
+      ...product,
+      rank: product.upvotes.length === maxUpvotes ? 1 : index + 2,
+    }));
+
+    return productsWithRank;
+  } catch (error) {
+    console.log("Error while getRankById", error);
+  }
+};
+
+export const getNotifications = async () => {
+  try {
+    const authUser = await auth();
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const notifications = await db.notification.findMany({
+      where: {
+        userId: authUser.user.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (notifications.length === 0) {
+      return null;
+    }
+
+    return notifications;
+  } catch (error) {
+    console.log("Error while getNotifications", error);
+  }
+};
+
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const authUser = await auth();
+
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("User ID is missing or invalid");
+    }
+
+    const userId = authUser?.user.id;
+
+    await db.notification.updateMany({
+      where: {
+        userId,
+      },
+      data: {
+        status: "READ",
+      },
+    });
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+  }
+};
+
+export const searchProducts = async (query: string) => {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        name: {
+          contains: query,
+          mode: "insensitive",
+        },
+        status: "ACTIVE",
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log("Error while searching products", error);
+  }
+};
+
+export const getProductsByUserId = async (userId: string) => {
+  try {
+    const products = await db.product.findMany({
+      where: {
+        userId,
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log("Error while getProductsByUserId", error);
+  }
+};

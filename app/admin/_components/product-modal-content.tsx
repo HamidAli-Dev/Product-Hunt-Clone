@@ -3,16 +3,35 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Session } from "next-auth";
-import { PiCaretUpFill, PiChatCircle, PiUploadSimple } from "react-icons/pi";
+import {
+  PiCaretUpFill,
+  PiChatCircle,
+  PiTrash,
+  PiUploadSimple,
+} from "react-icons/pi";
 
 import { PendingProduct } from "@/app/admin/_components/pending-products";
 import CarouselComponent from "@/app/admin/_components/carousel-component";
 import ShareModal from "@/app/admin/_components/modals/share-product-modal";
 import ShareModalContent from "@/app/admin/_components/share-modal-content";
+import { Badge } from "@/components/ui/badge";
+import { commentOnProduct, upvoteProduct } from "@/lib/server-actions";
+
+interface ExtendedProduct extends PendingProduct {
+  commentData: {
+    id: string;
+    userId: string;
+    user: string;
+    profile: string;
+    body: string;
+    name: string;
+    createdAt: Date;
+  }[];
+}
 
 interface ProductModalContentProps {
   authUser: Session | null;
-  currentProduct: PendingProduct | undefined | null;
+  currentProduct: ExtendedProduct | undefined | null;
   hasUpvoted: boolean;
   setHasUpvoted: React.Dispatch<React.SetStateAction<boolean>>;
   totalUpvotes: number;
@@ -28,6 +47,7 @@ const ProductModalContent = ({
   setTotalUpvotes,
 }: ProductModalContentProps) => {
   const [commentText, setCommentText] = useState("");
+  const [comments, setComments] = useState(currentProduct?.commentData || []);
 
   const [shareModalModalVisible, setShareModalVisible] = useState(false);
 
@@ -35,17 +55,54 @@ const ProductModalContent = ({
     return <div>No product selected</div>;
   }
 
-  const handleUpvoteClick = () => {
-    console.log("handleUpvoteClick");
+  if (!authUser?.user) {
+    return null;
+  }
+
+  const handleUpvoteClick = async () => {
+    try {
+      await upvoteProduct(currentProduct.id);
+      setTotalUpvotes(hasUpvoted ? totalUpvotes - 1 : totalUpvotes + 1);
+      setHasUpvoted(!hasUpvoted);
+    } catch (error) {
+      console.log("Error upvoting product", error);
+    }
   };
 
   const handleShareClick = () => {
     setShareModalVisible(true);
   };
 
-  const handleCommentSubmit = () => {
-    console.log("handleCommentSubmit");
+  const handleCommentSubmit = async () => {
+    if (!authUser?.user?.id || !authUser?.user?.name || !authUser?.user?.image)
+      return;
+
+    try {
+      await commentOnProduct(currentProduct.id, commentText);
+
+      setCommentText("");
+
+      setComments([
+        ...comments,
+        {
+          id: Date.now().toString(),
+          userId: authUser.user.id,
+          user: authUser.user.name,
+          profile: authUser.user.image,
+          body: commentText,
+          name: authUser.user.name.toLowerCase().replace(/\s/g, "_"),
+          createdAt: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.log("Error submitting comment: ", error);
+    }
   };
+
+  const handleDeleteComment = async (commentId: string) => {
+    console.log("handleDeleteComment", commentId);
+  };
+
   return (
     <div className="h-full">
       <div className="md:w-4/5 mx-auto">
@@ -146,11 +203,65 @@ const ProductModalContent = ({
             <div className="flex justify-end mt-4">
               <button
                 onClick={handleCommentSubmit}
-                className="bg-[#ff6154] text-white p-2 rounded-md"
+                className="bg-[#ff6154] text-white p-2 rounded-md cursor-pointer"
               >
                 Comment
               </button>
             </div>
+          </div>
+
+          <div className="py-8 space-y-8">
+            {comments.map((comment) => (
+              <div key={comment.id} className="flex gap-4">
+                <Image
+                  src={comment.profile}
+                  alt="profile"
+                  width={50}
+                  height={50}
+                  className="w-8 h-8 rounded-full mt-1 cursor-pointer"
+                />
+
+                <div className="w-full">
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-x-2 items-center">
+                      <h1 className="text-gray-600 font-semibold cursor-pointer">
+                        {comment.user}
+                      </h1>
+                      {comment.userId === currentProduct.userId && (
+                        <Badge className="bg-[#88aaff]">Creator</Badge>
+                      )}
+
+                      <div className="text-gray-500 text-xs">
+                        {new Date(comment.createdAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )}
+                      </div>
+                    </div>
+
+                    {(comment.userId === authUser?.user?.id ||
+                      currentProduct.userId === authUser?.user?.id) && (
+                      <PiTrash
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-red-500 hover:cursor-pointer"
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    className="text-gray-600 text-sm 
+                    hover:cursor-pointer mt-2"
+                  >
+                    {comment.body}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -159,7 +270,7 @@ const ProductModalContent = ({
         visible={shareModalModalVisible}
         setVisible={setShareModalVisible}
       >
-        <ShareModalContent currentProduct={currentProduct} />
+        <ShareModalContent currentProduct={currentProduct as ExtendedProduct} />
       </ShareModal>
     </div>
   );
