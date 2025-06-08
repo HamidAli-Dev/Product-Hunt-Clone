@@ -678,3 +678,26 @@ export const getProductsByUserId = async (userId: string) => {
     console.log("Error while getProductsByUserId", error);
   }
 };
+
+export const isUserPremium = async () => {
+  try {
+    const authUser = await auth();
+    if (!authUser || !authUser.user || !authUser.user.id) {
+      throw new Error("Unauthorized");
+    }
+
+    const user = await db.user.findUnique({
+      where: {
+        id: authUser.user.id,
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user.isPremium;
+  } catch (error) {
+    console.log("Error while isUserPremium", error);
+  }
+};
