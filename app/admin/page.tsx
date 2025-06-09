@@ -13,11 +13,28 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import PendingProducts from "@/app/admin/_components/pending-products";
-import { getPendingProducts } from "@/lib/server-actions";
+import {
+  getActiveProducts,
+  getAdminData,
+  getPendingProducts,
+  getRejectedProducts,
+  getTotalUpvotes,
+  getUsers,
+} from "@/lib/server-actions";
+import OverviewChart from "./_components/overview-chart";
+import RecentActivity from "./_components/recent-activity";
 
 const AdminPage = async () => {
   const authUser = await auth();
   const pendingProducts = (await getPendingProducts()) || [];
+
+  const users = (await getUsers()) || [];
+  const activeProducts = (await getActiveProducts()) || [];
+  const rejectedProducts = (await getRejectedProducts()) || [];
+  const totalUpvotes = await getTotalUpvotes();
+  const data = (await getAdminData()) || [];
+
+  const premiumUsers = users.filter((user) => user.isPremium);
   return (
     <div className="px-8 md:px-20">
       <div>
@@ -29,8 +46,7 @@ const AdminPage = async () => {
                 alt="logo"
                 width={500}
                 height={500}
-                className="w-20 h-20 md:w-40
-                         md:h-40 border rounded-md cursor-pointer"
+                className="w-20 h-20 md:w-40 md:h-40 border rounded-md cursor-pointer"
               />
             </Link>
 
@@ -53,7 +69,7 @@ const AdminPage = async () => {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-bold">Users</CardTitle>👤
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{users.length}</CardContent>
         </Card>
 
         <Card>
@@ -61,7 +77,7 @@ const AdminPage = async () => {
             <CardTitle className="text-md font-bold">Premium Users</CardTitle>{" "}
             💰
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{premiumUsers.length}</CardContent>
         </Card>
 
         <Card>
@@ -69,7 +85,7 @@ const AdminPage = async () => {
             <CardTitle className="text-md font-bold">Active Products</CardTitle>{" "}
             📦
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{activeProducts.length}</CardContent>
         </Card>
 
         <Card>
@@ -79,7 +95,7 @@ const AdminPage = async () => {
             </CardTitle>{" "}
             🕒
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{pendingProducts.length}</CardContent>
         </Card>
 
         <Card>
@@ -89,14 +105,14 @@ const AdminPage = async () => {
             </CardTitle>
             👤
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{rejectedProducts.length}</CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-md font-bold">Upvotes</CardTitle> 🔺
           </CardHeader>
-          <CardContent>0</CardContent>
+          <CardContent>{totalUpvotes}</CardContent>
         </Card>
       </div>
 
@@ -105,7 +121,9 @@ const AdminPage = async () => {
           <CardHeader>
             <CardTitle className="pb-10">Overview</CardTitle>
           </CardHeader>
-          <CardContent className="pl-2">OverviewChart</CardContent>
+          <CardContent className="pl-2">
+            <OverviewChart data={data} />
+          </CardContent>
         </Card>
 
         <Card className="w-full col-span-4 md:col-span-3">
@@ -113,7 +131,9 @@ const AdminPage = async () => {
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>View recent activity</CardDescription>
           </CardHeader>
-          <CardContent>RecentActivity</CardContent>
+          <CardContent>
+            <RecentActivity users={users} />
+          </CardContent>
         </Card>
       </div>
 
