@@ -15,6 +15,15 @@ import RejectProductModalContent from "@/app/admin/_components/reject-product-mo
 export interface PendingProduct extends Product {
   categories: Category[];
   images: ImageType[];
+  commentData: {
+    id: string;
+    userId: string;
+    user: string;
+    profile: string;
+    body: string;
+    name: string;
+    createdAt: Date;
+  }[];
 }
 
 interface PendingProductsProps {
@@ -41,6 +50,7 @@ const PendingProducts = ({
       ...product,
       categories: product.categories,
       images: product.images,
+      commentData: product.commentData || []
     };
   });
 

@@ -235,10 +235,26 @@ export const getPendingProducts = async () => {
       include: {
         categories: true,
         images: true,
+        comments: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
-    return products;
+    return products.map(product => ({
+      ...product,
+      commentData: product.comments.map(comment => ({
+        id: comment.id,
+        userId: comment.userId,
+        user: comment.user.name || '',
+        profile: comment.user.image || '',
+        body: comment.body,
+        name: comment.user.name?.toLowerCase().replace(/\s/g, '_') || '',
+        createdAt: comment.createdAt
+      }))
+    }));
   } catch (error) {
     console.log("Error while getting pending products", error);
   }
@@ -701,3 +717,71 @@ export const isUserPremium = async () => {
     console.log("Error while isUserPremium", error);
   }
 };
+
+export const getUsers = async () => {
+  try {
+    const users = await db.user.findMany();
+    return users
+  } catch (error) {
+    console.log("Error while getUsers", error);
+    
+  }
+}
+
+export const getTotalUpvotes = async () => {
+  try {
+    const totalUpvotes = await db.upvote.count({
+      where:{
+        product:{
+          status: "ACTIVE"
+        }
+      }
+    })
+
+    return totalUpvotes
+  } catch (error) {
+    console.log("Error while getTotalUpvotes", error);
+    
+  }
+}
+
+export const getRejectedProducts = async () => {
+  try {
+    const rejectedProducts = await db.product.findMany({
+      where:{
+        status: "REJECTED"
+      },
+      include:{
+        categories: true,
+        images: true
+      }
+
+    })
+
+    return rejectedProducts
+  } catch (error) {
+    console.log("Error while getRejectedProducts", error);    
+    
+  }
+}
+
+export const getAdminData = async () => {
+  try {
+    const totalProducts = await db.product.count()
+    const totalUsers = await db.user.count()
+    const totalUpvotes = await db.upvote.count()
+    const totalCategories = await db.category.count()
+    const totalComments = await db.comment.count()
+
+    return {
+      totalProducts,
+      totalUsers,
+      totalUpvotes,
+      totalCategories,
+      totalComments
+    }
+  } catch (error) {
+    console.log("Error while getAdminData", error);
+    
+  }
+}

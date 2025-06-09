@@ -13,14 +13,16 @@ import {
 import { getProductsByCategoryName } from "@/lib/server-actions";
 
 interface CategoryPageProps {
-  params: {
+  params: Promise<{
     category: string;
-  };
+  }>;
 }
 
 const CategoryPage = async ({ params }: CategoryPageProps) => {
+  const resolvedParams = await params;
+  const { category } = resolvedParams;
   const capitalizedCategory =
-    params.category.charAt(0).toUpperCase() + params.category.slice(1);
+    category.charAt(0).toUpperCase() + category.slice(1);
 
   const products = (await getProductsByCategoryName(capitalizedCategory)) || [];
 

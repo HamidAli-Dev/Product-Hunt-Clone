@@ -6,12 +6,18 @@ import CarouselComponent from "@/app/admin/_components/carousel-component";
 import { getProductBySlug } from "@/lib/server-actions";
 
 interface ProductPageProps {
-  params: {
+  params: Promise<
+  {
     slug: string;
-  };
+  }
+  >
 }
 const ProductPage = async ({ params }: ProductPageProps) => {
-  const product = await getProductBySlug(params.slug);
+  const resolvedParams = await params;
+
+  const {slug} = resolvedParams;
+
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return <div>Product not found</div>;

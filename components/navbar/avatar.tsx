@@ -17,9 +17,6 @@ interface AvatarProps {
   authUser: Session | null;
 }
 const Avatar = ({ authUser }: AvatarProps) => {
-  const handleMyUpvotes = () => {
-    window.location.href = "/my-upvoted";
-  };
   return (
     <div>
       <DropdownMenu>
@@ -43,13 +40,13 @@ const Avatar = ({ authUser }: AvatarProps) => {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <div
-              onClick={handleMyUpvotes}
+            <Link
+              href={"/my-upvoted"}
               className="flex gap-x-2 rounded-sm w-full cursor-pointer"
             >
               <PiHeart className="text-xl" />
               Upvoted
-            </div>
+            </Link>
           </DropdownMenuItem>
           <DropdownMenuItem>
             <Link

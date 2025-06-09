@@ -11,13 +11,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 interface SingleProductPageProps {
-  params: {
+  params: Promise<{
     productId: string;
-  };
+  }>;
 }
 
 const SingleProductPage = async ({ params }: SingleProductPageProps) => {
-  const product = await getProductById(params.productId);
+  const resolvedParams = await params;
+  const { productId } = resolvedParams;
+
+  const product = await getProductById(productId);
 
   if (!product) {
     return <div>Product not found</div>;
