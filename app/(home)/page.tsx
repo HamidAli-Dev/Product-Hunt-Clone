@@ -20,8 +20,6 @@ export default async function Home() {
     }))
   }));
 
-  console.log("activeProducts", activeProducts);
-
   return (
     <div className="md:w-3/5 mx-auto py-10 px-6">
       <ActiveProducts activeProducts={activeProducts} />
