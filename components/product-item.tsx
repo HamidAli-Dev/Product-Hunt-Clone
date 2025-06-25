@@ -75,6 +75,11 @@ const ProductItem = ({ authUser, product }: ProductItemProps) => {
   ) => {
     e.stopPropagation();
 
+    if(!authUser) {
+      setShowLoginModal(true);
+      return;
+    }
+
     try {
       await upvoteProduct(product.id);
       setHasUpvoted(!hasUpvoted);
